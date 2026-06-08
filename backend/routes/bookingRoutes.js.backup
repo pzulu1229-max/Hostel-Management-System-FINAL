@@ -1,0 +1,138 @@
+const express = require('express');
+const router = express.Router();
+const pool = require('../db');
+
+// Get all bookings
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM allocations WHERE status = $1', ['active']);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get user's bookings
+router.get('/my-bookings/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT b.*, r.room_number, r.price, r.capacity, r.current_occupancy
+      FROM allocations b
+      JOIN rooms r ON b.room_id = r.id
+      WHERE b.user_id = $1 AND b.status = 'active'
+    `, [userId]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create a booking - UPDATED with occupancy
+router.post('/', async (req, res) => {
+  const { user_id, room_id } = req.body;
+  
+  console.log('📚 Booking request:', { user_id, room_id });
+  
+  try {
+    // Check if user already has a booking
+    const userBooking = await pool.query(
+      'SELECT * FROM allocations WHERE user_id = $1 AND status = $2',
+      [user_id, 'active']
+    );
+    
+    if (userBooking.rows.length > 0) {
+      return res.status(400).json({ error: 'You already have a booked room! Cancel it first.' });
+    }
+    
+    // Get room data
+    const room = await pool.query('SELECT * FROM rooms WHERE id = $1', [room_id]);
+    if (room.rows.length === 0) {
+      return res.status(404).json({ error: 'Room not found' });
+    }
+    
+    const roomData = room.rows[0];
+    const currentOcc = roomData.current_occupancy || 0;
+    const capacity = roomData.capacity || 4;
+    
+    console.log(`📊 Room ${roomData.room_number} - Current occupancy: ${currentOcc}/${capacity}`);
+    
+    if (currentOcc >= capacity) {
+      return res.status(400).json({ error: `Room is full! (${currentOcc}/${capacity})` });
+    }
+    
+    // Check if room is booked by someone else
+    const existing = await pool.query(
+      'SELECT * FROM allocations WHERE room_id = $1 AND status = $2',
+      [room_id, 'active']
+    );
+    
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'This room is already taken by another student' });
+    }
+    
+    // Create booking
+    await pool.query(
+      'INSERT INTO allocations (user_id, room_id, status, allocated_date) VALUES ($1, $2, $3, CURRENT_DATE)',
+      [user_id, room_id, 'active']
+    );
+    console.log('✅ Booking created');
+    
+    // Update occupancy - INCREASE by 1
+    const newOccupancy = currentOcc + 1;
+    await pool.query(
+      'UPDATE rooms SET current_occupancy = $1 WHERE id = $2',
+      [newOccupancy, room_id]
+    );
+    console.log(`✅ Updated room ${roomData.room_number} occupancy to ${newOccupancy}/${capacity}`);
+    
+    res.json({ 
+      success: true, 
+      message: `✅ Room ${roomData.room_number} booked! (${newOccupancy}/${capacity})`
+    });
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Cancel a booking - UPDATED with occupancy decrease
+router.put('/cancel/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    console.log('❌ Cancel request for booking ID:', id);
+    
+    // Get the booking
+    const booking = await pool.query(
+      'SELECT * FROM allocations WHERE id = $1 AND status = $2',
+      [id, 'active']
+    );
+    
+    if (booking.rows.length === 0) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    
+    const roomId = booking.rows[0].room_id;
+    
+    // Get current room occupancy
+    const room = await pool.query('SELECT current_occupancy, room_number FROM rooms WHERE id = $1', [roomId]);
+    const currentOcc = room.rows[0].current_occupancy || 0;
+    const newOccupancy = Math.max(0, currentOcc - 1);
+    
+    // Cancel booking
+    await pool.query('UPDATE allocations SET status = $1 WHERE id = $2', ['cancelled', id]);
+    
+    // Update room occupancy - DECREASE by 1
+    await pool.query('UPDATE rooms SET current_occupancy = $1 WHERE id = $2', [newOccupancy, roomId]);
+    
+    console.log(`✅ Cancelled: ${room.rows[0].room_number} occupancy ${currentOcc} → ${newOccupancy}`);
+    
+    res.json({ success: true, message: 'Booking cancelled' });
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;

@@ -1,0 +1,395 @@
+/* Admin Panel Styles */
+.admin-container {
+  min-height: 100vh;
+  background: white;
+}
+
+/* Navbar */
+.admin-navbar {
+  background: #1a237e;
+  color: white;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-navbar h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.admin-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.admin-navbar-right button {
+  padding: 8px 16px;
+  background: white;
+  color: #1a237e;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Message */
+.admin-message {
+  background: #4caf50;
+  color: white;
+  padding: 12px;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Left-aligned Tabs */
+.admin-tabs {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0 30px;
+  background: white;
+  gap: 5px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.admin-tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s;
+}
+
+.admin-tab:hover {
+  color: #1a237e;
+}
+
+.admin-tab-active {
+  color: #1a237e;
+  font-weight: bold;
+  border-bottom: 3px solid #1a237e;
+}
+
+/* Content Area */
+.admin-content {
+  padding: 30px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: white;
+}
+
+/* Tables - Proper alignment */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.admin-table th {
+  padding: 14px 12px;
+  text-align: left;
+  background: #1a237e;
+  color: white;
+  border: 1px solid #3e4a8b;
+  font-weight: bold;
+}
+
+.admin-table td {
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #ddd;
+  vertical-align: middle;
+}
+
+/* Buttons */
+.approve-btn {
+  padding: 8px 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.reject-btn {
+  padding: 8px 16px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.revoke-btn {
+  padding: 6px 12px;
+  background: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.edit-btn {
+  padding: 5px 10px;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-right: 5px;
+  font-size: 12px;
+}
+
+.delete-btn {
+  padding: 5px 10px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.add-btn {
+  padding: 10px 20px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.clear-btn {
+  padding: 10px 20px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Booking Cards */
+.booking-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.booking-card h4 {
+  color: #1a237e;
+  margin: 0 0 10px 0;
+}
+
+.booking-info {
+  flex: 1;
+}
+
+.booking-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Room Grid for Occupied Rooms */
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.room-card {
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+.room-card:hover {
+  transform: translateY(-2px);
+}
+
+.room-card h4 {
+  color: #1a237e;
+  margin: 0 0 10px 0;
+  font-size: 20px;
+}
+
+.room-card p {
+  margin: 8px 0;
+}
+
+/* Progress Bar for Occupancy */
+.occupancy-container {
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.occupancy-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.occupied-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #f44336;
+  color: white;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.room-description {
+  color: #666;
+  font-size: 13px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+
+/* Header Row with buttons */
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.header-row h3 {
+  margin: 0;
+}
+
+/* Summary Box */
+.summary-box {
+  margin-top: 20px;
+  padding: 15px;
+  background: #e8f5e9;
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  text-align: center;
+  color: #2e7d32;
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  width: 400px;
+  max-width: 90%;
+}
+
+.modal h3 {
+  color: #1a237e;
+  margin-bottom: 20px;
+}
+
+.modal input {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.save-btn {
+  padding: 10px 20px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+  background: #999;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.danger-btn {
+  padding: 10px 20px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px;
+  color: #666;
+  font-size: 16px;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  color: white;
+  font-size: 12px;
+}
