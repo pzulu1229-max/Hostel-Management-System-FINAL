@@ -54,32 +54,35 @@ router.get('/students', async (req, res) => {
   }
 });
 
-// Update student
+// Update student (with optional password update)
 router.put('/students/:id', async (req, res) => {
   const { id } = req.params;
   const { name, email, password, role } = req.body;
+  
   try {
-    let query = 'UPDATE users SET name = $1, email = $2, role = $3';
-    let params = [name, email, role];
+    let query;
+    let params;
     
     if (password && password.trim() !== '') {
+      // Hash the new password
       const hashedPassword = await bcrypt.hash(password, 10);
-      query += ', password = $4';
-      params.push(hashedPassword);
-      params.push(id);
+      query = 'UPDATE users SET name = $1, email = $2, password = $3, role = $4 WHERE id = $5 RETURNING id, name, email, role';
+      params = [name, email, hashedPassword, role, id];
     } else {
-      params.push(id);
+      // Update without changing password
+      query = 'UPDATE users SET name = $1, email = $2, role = $3 WHERE id = $4 RETURNING id, name, email, role';
+      params = [name, email, role, id];
     }
     
-    query += ' WHERE id = $4 RETURNING id, name, email, role';
-    
     const result = await pool.query(query, params);
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Student not found' });
     }
-    res.json(result.rows[0]);
+    
+    res.json({ success: true, user: result.rows[0] });
   } catch (err) {
-    console.error('Error updating student:', err);
+    console.error('Error updating student:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -145,8 +148,6 @@ router.put('/revoke-approval/:id', async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // Delete a specific booking
 router.delete('/booking/:id', async (req, res) => {
   const { id } = req.params;
@@ -158,10 +159,7 @@ router.delete('/booking/:id', async (req, res) => {
     
     const roomId = booking.rows[0].room_id;
     
-    // Delete the booking
     await pool.query('DELETE FROM allocations WHERE id = $1', [id]);
-    
-    // Decrease room occupancy if it was active
     await pool.query('UPDATE rooms SET current_occupancy = GREATEST(current_occupancy - 1, 0) WHERE id = $1', [roomId]);
     
     res.json({ message: 'Booking deleted successfully' });
@@ -173,17 +171,13 @@ router.delete('/booking/:id', async (req, res) => {
 // Clear ALL bookings from database
 router.delete('/clear-all-bookings', async (req, res) => {
   try {
-    // Delete all bookings
     await pool.query('DELETE FROM allocations');
-    
-    // Reset all room occupancy to 0
     await pool.query('UPDATE rooms SET current_occupancy = 0, is_available = true');
-    
-    // Clear all blocked rooms
     await pool.query('DELETE FROM blocked_rooms');
-    
     res.json({ message: 'All bookings cleared successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+module.exports = router;

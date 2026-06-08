@@ -12,142 +12,65 @@ function Dashboard({ user, onLogout }) {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  
   const [searchTerm, setSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState('all');
   const [capacityFilter, setCapacityFilter] = useState('all');
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
-
-  useEffect(() => {
-    filterRooms();
-  }, [rooms, searchTerm, priceFilter, capacityFilter, availabilityFilter]);
+  useEffect(() => { fetchAllData(); }, []);
+  useEffect(() => { filterRooms(); }, [rooms, searchTerm, priceFilter, capacityFilter, availabilityFilter]);
 
   const fetchAllData = async () => {
     setLoading(true);
-    await Promise.all([
-      fetchRooms(),
-      fetchComplaints(),
-      fetchMyBookings()
-    ]);
+    await Promise.all([fetchRooms(), fetchComplaints(), fetchMyBookings()]);
     setLoading(false);
   };
 
-  const fetchRooms = async () => {
-    try {
-      const response = await api.get('/rooms');
-      setRooms(response.data);
-      setFilteredRooms(response.data);
-    } catch (err) {
-      console.error('Error fetching rooms:', err);
-    }
-  };
-
-  const fetchComplaints = async () => {
-    try {
-      const response = await api.get(`/complaints/my-complaints/${user.id}`);
-      setComplaints(response.data);
-    } catch (err) {
-      console.error('Error fetching complaints:', err);
-      setComplaints([]);
-    }
-  };
-
-  const fetchMyBookings = async () => {
-    try {
-      const response = await api.get(`/bookings/my-bookings/${user.id}`);
-      setMyBookings(response.data);
-    } catch (err) {
-      console.error('Error fetching bookings:', err);
-      setMyBookings([]);
-    }
-  };
+  const fetchRooms = async () => { try { const res = await api.get('/rooms'); setRooms(res.data); setFilteredRooms(res.data); } catch (err) { console.error(err); } };
+  const fetchComplaints = async () => { try { const res = await api.get(`/complaints/my-complaints/${user.id}`); setComplaints(res.data); } catch (err) { setComplaints([]); } };
+  const fetchMyBookings = async () => { try { const res = await api.get(`/bookings/my-bookings/${user.id}`); setMyBookings(res.data); } catch (err) { setMyBookings([]); } };
 
   const filterRooms = () => {
     let filtered = [...rooms];
-    
-    if (searchTerm) {
-      filtered = filtered.filter(room => 
-        room.room_number.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    if (priceFilter !== 'all') {
-      filtered = filtered.filter(room => {
-        if (priceFilter === 'under500') return room.price < 500;
-        if (priceFilter === '500-700') return room.price >= 500 && room.price <= 700;
-        if (priceFilter === '700-900') return room.price > 700 && room.price <= 900;
-        if (priceFilter === '900-1000') return room.price > 900 && room.price <= 1000;
-        return true;
-      });
-    }
-    
-    if (capacityFilter !== 'all') {
-      filtered = filtered.filter(room => room.capacity === parseInt(capacityFilter));
-    }
-    
-    if (availabilityFilter === 'available') {
-      filtered = filtered.filter(room => {
-        const currentOcc = room.current_occupancy || 0;
-        const capacity = room.capacity || 4;
-        return currentOcc < capacity;
-      });
-    }
-    
+    if (searchTerm) filtered = filtered.filter(r => r.room_number.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (priceFilter !== 'all') filtered = filtered.filter(r => {
+      if (priceFilter === 'under500') return r.price < 500;
+      if (priceFilter === '500-700') return r.price >= 500 && r.price <= 700;
+      if (priceFilter === '700-900') return r.price > 700 && r.price <= 900;
+      if (priceFilter === '900-1000') return r.price > 900 && r.price <= 1000;
+      return true;
+    });
+    if (capacityFilter !== 'all') filtered = filtered.filter(r => r.capacity === parseInt(capacityFilter));
+    if (availabilityFilter === 'available') filtered = filtered.filter(r => (r.current_occupancy || 0) < (r.capacity || 4));
     setFilteredRooms(filtered);
   };
 
   const handleBookRoom = async (roomId, roomNumber) => {
-    if (myBookings.length > 0) {
-      const booking = myBookings[0];
-      if (booking.approval_status === 'pending') {
-        alert('You already have a pending request! Cancel it from My Bookings tab.');
-      } else if (booking.approval_status === 'approved') {
-        alert('You already have an approved room!');
-      }
-      return;
-    }
-    
+    if (myBookings.length > 0) { alert('You already have a pending or approved booking!'); return; }
     if (window.confirm(`Request to book Room ${roomNumber}?`)) {
-      try {
-        const response = await api.post('/bookings', {
-          user_id: user.id,
-          room_id: roomId
-        });
-        
-        if (response.data.success) {
-          setMessage(`Booking request sent for Room ${roomNumber}! Waiting for admin approval.`);
-          await fetchAllData();
-          setTimeout(() => setMessage(''), 5000);
-        }
-      } catch (err) {
-        alert(err.response?.data?.error || 'Failed to book room');
-      }
+      try { await api.post('/bookings', { user_id: user.id, room_id: roomId }); setMessage(`Booking request sent for Room ${roomNumber}!`); await fetchAllData(); setTimeout(() => setMessage(''), 5000); } 
+      catch (err) { alert(err.response?.data?.error || 'Failed to book room'); }
     }
   };
 
-  const handleCancelPendingRequest = async (bookingId, roomNumber) => {
-    if (window.confirm(`Cancel your pending request for Room ${roomNumber}?`)) {
-      try {
-        const response = await api.put(`/bookings/cancel/${bookingId}`);
-        if (response.data.success) {
-          setMessage(`Pending request for Room ${roomNumber} cancelled.`);
-          await fetchAllData();
-          setTimeout(() => setMessage(''), 4000);
-        }
-      } catch (err) {
-        alert('Failed to cancel request');
-      }
+  const handleCancelRequest = async (bookingId, roomNumber) => {
+    if (window.confirm(`Cancel your request for Room ${roomNumber}?`)) {
+      try { await api.put(`/bookings/cancel/${bookingId}`); setMessage(`Request for Room ${roomNumber} cancelled.`); await fetchAllData(); setTimeout(() => setMessage(''), 4000); } 
+      catch (err) { alert('Failed to cancel request'); }
     }
   };
 
-  const handleComplaintSubmit = async (e) => {
+  const handleDeleteComplaint = async (complaintId) => {
+    if (window.confirm('Delete this complaint?')) {
+      try { await api.delete(`/complaints/${complaintId}`); setMessage('Complaint deleted!'); await fetchComplaints(); setTimeout(() => setMessage(''), 3000); } 
+      catch (err) { alert('Error deleting complaint'); }
+    }
+  };
+
+  const handleSubmitComplaint = async (e) => {
     e.preventDefault();
+    if (complaintText.length > 100) { alert('Description cannot exceed 100 characters!'); return; }
     setUploading(true);
-    
     try {
       let imageUrl = '';
       if (complaintImage) {
@@ -156,47 +79,16 @@ function Dashboard({ user, onLogout }) {
         const uploadRes = await api.post('/upload', formData);
         imageUrl = uploadRes.data.imageUrl;
       }
-      
-      await api.post('/complaints', {
-        user_id: user.id,
-        description: complaintText,
-        image_url: imageUrl,
-      });
-      
-      setComplaintText('');
-      setComplaintImage(null);
-      await fetchComplaints();
-      setMessage('Complaint submitted successfully!');
-      setTimeout(() => setMessage(''), 3000);
-      
-      const fileInput = document.getElementById('complaintImage');
-      if (fileInput) fileInput.value = '';
-    } catch (err) {
-      alert('Error submitting complaint');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeleteComplaint = async (complaintId) => {
-    if (window.confirm('Are you sure you want to delete this complaint? This action cannot be undone.')) {
-      try {
-        const response = await api.delete(`/complaints/${complaintId}`);
-        if (response.status === 200 || response.status === 204) {
-          setMessage('Complaint deleted successfully!');
-          await fetchComplaints();
-          setTimeout(() => setMessage(''), 3000);
-        }
-      } catch (err) {
-        alert('Error deleting complaint');
-      }
-    }
+      await api.post('/complaints', { user_id: user.id, description: complaintText, image_url: imageUrl });
+      setComplaintText(''); setComplaintImage(null); await fetchComplaints(); setMessage('Complaint submitted!'); setTimeout(() => setMessage(''), 3000);
+      document.getElementById('complaintImage').value = '';
+    } catch (err) { alert('Error submitting complaint'); }
+    finally { setUploading(false); }
   };
 
   const getRoomStatus = (roomId) => {
     const booking = myBookings.find(b => b.room_id === roomId);
-    if (!booking) return null;
-    return booking.approval_status;
+    return booking ? booking.approval_status : null;
   };
 
   if (loading) return <div style={styles.loading}>Loading...</div>;
@@ -219,7 +111,6 @@ function Dashboard({ user, onLogout }) {
       {message && <div style={styles.message}>{message}</div>}
 
       <div style={styles.mainLayout}>
-        {/* Left Sidebar - Tabs */}
         <div style={styles.sidebar}>
           <button onClick={() => setActiveTab('rooms')} style={activeTab === 'rooms' ? styles.sidebarActive : styles.sidebarBtn}>
             <span style={styles.sidebarIcon}>🏠</span> Available Rooms
@@ -236,7 +127,6 @@ function Dashboard({ user, onLogout }) {
           </button>
         </div>
 
-        {/* Right Content Area */}
         <div style={styles.contentArea}>
           {activeTab === 'rooms' && (
             <div>
@@ -272,26 +162,18 @@ function Dashboard({ user, onLogout }) {
               
               <div style={styles.roomGrid}>
                 {filteredRooms.map(room => {
-                  const roomStatus = getRoomStatus(room.id);
-                  const currentOcc = room.current_occupancy || 0;
-                  const capacity = room.capacity || 4;
-                  const isFull = currentOcc >= capacity;
-                  const occupancyPercent = (currentOcc / capacity) * 100;
-                  
+                  const status = getRoomStatus(room.id);
+                  const occ = room.current_occupancy || 0;
+                  const cap = room.capacity || 4;
                   return (
                     <div key={room.id} style={styles.roomCard}>
                       <h4 style={styles.roomNumber}>Room {room.room_number}</h4>
-                      <p>Capacity: {capacity} person{capacity > 1 ? 's' : ''}</p>
+                      <p>Capacity: {cap} person{cap > 1 ? 's' : ''}</p>
                       <p>Price: <span style={styles.price}>K{room.price}</span>/month</p>
-                      <div style={styles.occupancyContainer}>
-                        <div style={styles.occupancyLabel}><span>Occupancy:</span><span>{currentOcc}/{capacity}</span></div>
-                        <div style={styles.progressBar}><div style={{...styles.progressFill, width: `${occupancyPercent}%`, background: isFull ? '#f44336' : '#4caf50'}}></div></div>
-                      </div>
-                      {room.description && <p style={styles.description}>📝 {room.description}</p>}
-                      {roomStatus === 'pending' && <p style={styles.pendingBadge}>⏳ Waiting for Admin Approval</p>}
-                      {roomStatus === 'approved' && <p style={styles.approvedBadge}>✅ Approved - You have this room</p>}
-                      {!roomStatus && <p style={isFull ? styles.fullBadge : styles.availableBadge}>{isFull ? 'Fully Booked' : 'Available'}</p>}
-                      {!roomStatus && !isFull && !hasPending && !hasApproved && <button onClick={() => handleBookRoom(room.id, room.room_number)} style={styles.bookBtn}>Request to Book</button>}
+                      <p>Occupancy: {occ}/{cap}</p>
+                      {status === 'pending' && <p style={styles.pendingBadge}>⏳ Waiting for Approval</p>}
+                      {status === 'approved' && <p style={styles.approvedBadge}>✅ Approved - You have this room</p>}
+                      {!status && occ < cap && !hasPending && !hasApproved && <button onClick={() => handleBookRoom(room.id, room.room_number)} style={styles.bookBtn}>Request to Book</button>}
                     </div>
                   );
                 })}
@@ -312,7 +194,7 @@ function Dashboard({ user, onLogout }) {
                     <p>Price: K{room?.price}/month</p>
                     <p>Requested: {new Date(booking.allocated_date).toLocaleDateString()}</p>
                     <p>Status: <span style={{...styles.statusBadge, background: booking.approval_status === 'approved' ? '#4caf50' : '#ff9800'}}>{booking.approval_status === 'approved' ? 'Approved' : 'Pending'}</span></p>
-                    {booking.approval_status === 'pending' && <button onClick={() => handleCancelPendingRequest(booking.id, room?.room_number)} style={styles.cancelPendingBtn}>Cancel Request</button>}
+                    {booking.approval_status === 'pending' && <button onClick={() => handleCancelRequest(booking.id, room?.room_number)} style={styles.cancelPendingBtn}>Cancel Request</button>}
                     {booking.approval_status === 'approved' && <p style={styles.approvedNote}>You have been approved for this room.</p>}
                   </div>
                 );
@@ -343,7 +225,7 @@ function Dashboard({ user, onLogout }) {
           {activeTab === 'newComplaint' && (
             <div>
               <h3>File a Complaint</h3>
-              <form onSubmit={handleComplaintSubmit} style={styles.complaintForm}>
+              <form onSubmit={handleSubmitComplaint} style={styles.complaintForm}>
                 <textarea placeholder="Describe your issue..." value={complaintText} onChange={(e) => setComplaintText(e.target.value)} style={styles.textarea} required />
                 <div><label>Upload Image:</label><input type="file" accept="image/*" onChange={(e) => setComplaintImage(e.target.files[0])} style={styles.fileInput} /></div>
                 <button type="submit" style={styles.submitBtn} disabled={uploading}>{uploading ? 'Uploading...' : 'Submit Complaint'}</button>
@@ -358,12 +240,12 @@ function Dashboard({ user, onLogout }) {
 
 const styles = {
   appContainer: { minHeight: '100vh', background: '#f5f5f5' },
-  nav: { position: "sticky", top: 0, zIndex: 100, background: "#667eea", color: "white", padding: "15px 30px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" },
+  nav: { background: '#667eea', color: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' },
   navTitle: { fontSize: '24px', fontWeight: 'bold', margin: 0 },
   navRight: { display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' },
   userName: { marginRight: '20px' },
-  pendingBadge: { background: '#ff9800', padding: '5px 10px', borderRadius: '20px', fontSize: '12px', marginRight: '15px' },
-  approvedBadge: { background: '#4caf50', padding: '5px 10px', borderRadius: '20px', fontSize: '12px', marginRight: '15px' },
+  pendingBadge: { background: '#ff9800', padding: '5px 10px', borderRadius: '20px', fontSize: '12px', color: '#fff' },
+  approvedBadge: { background: '#4caf50', padding: '5px 10px', borderRadius: '20px', fontSize: '12px', color: '#fff' },
   logoutBtn: { padding: '8px 16px', background: '#fff', color: '#667eea', border: 'none', borderRadius: '5px', cursor: 'pointer' },
   message: { background: '#4caf50', color: 'white', padding: '12px', textAlign: 'center', fontWeight: 'bold' },
   
@@ -389,13 +271,6 @@ const styles = {
   roomCard: { padding: '20px', border: '1px solid #e0e0e0', borderRadius: '12px', background: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
   roomNumber: { fontSize: '20px', color: '#667eea', marginBottom: '10px' },
   price: { fontSize: '18px', fontWeight: 'bold', color: '#4caf50' },
-  occupancyContainer: { marginTop: '12px', marginBottom: '12px' },
-  occupancyLabel: { display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '13px' },
-  progressBar: { width: '100%', height: '8px', backgroundColor: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' },
-  progressFill: { height: '100%', transition: 'width 0.3s ease', borderRadius: '4px' },
-  description: { color: '#666', fontSize: '14px', marginTop: '8px' },
-  availableBadge: { display: 'inline-block', padding: '4px 12px', background: '#4caf50', color: 'white', borderRadius: '20px', fontSize: '12px', marginTop: '10px', fontWeight: 'bold' },
-  fullBadge: { display: 'inline-block', padding: '4px 12px', background: '#9e9e9e', color: 'white', borderRadius: '20px', fontSize: '12px', marginTop: '10px', fontWeight: 'bold' },
   bookBtn: { width: '100%', padding: '10px', marginTop: '15px', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
   bookingCard: { padding: '20px', border: '2px solid #ff9800', borderRadius: '12px', background: '#fff3e0', marginBottom: '15px' },
   statusBadge: { display: 'inline-block', padding: '4px 12px', borderRadius: '20px', color: 'white', fontSize: '12px', marginLeft: '10px' },
@@ -403,7 +278,7 @@ const styles = {
   approvedNote: { marginTop: '15px', color: '#4caf50', fontWeight: 'bold', textAlign: 'center' },
   complaintCard: { padding: '15px', border: '1px solid #ddd', borderRadius: '8px', marginBottom: '15px', background: '#fff' },
   complaintImage: { maxWidth: '200px', marginTop: '10px', borderRadius: '5px' },
-  complaintFooter: { marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' },
+  complaintFooter: { marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
   status: { display: 'inline-block', padding: '4px 12px', borderRadius: '20px', color: 'white', fontSize: '12px' },
   deleteComplaintBtn: { padding: '5px 10px', background: '#f44336', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' },
   complaintForm: { maxWidth: '600px' },
